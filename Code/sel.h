@@ -125,16 +125,12 @@ float calculateLocalJ(int i,mesh m){
 
 Matrix createLocalK(int e,mesh &m){
     //Preparaci�n de ingredientes
-    float u_bar,nu,rho,Ae,J,D;
-    
-    //Componentes de K
-    // [ A+K  G ]
-    // [  D   0 ]
-    Matrix matrixA,matrixK,matrixG,matrixD;
+    float tao,k,lambda,Ae,delta,eta,J,D;
+    Matrix matrixA,matrixK,matrixG,matrixD, matrixDd, matrixI;
     Matrix K,g_matrix,g_matrix_t,Alpha,Beta,Alphat,Betat,BPrima,BPrimat;
 
     //Preparando matrixA (En clase conocida simplemente como A)
-    u_bar = m.getParameter(ADJECTIVE_VELOCITY);
+    //u_bar = m.getParameter(ADJECTIVE_VELOCITY);
     J = calculateLocalJ(e,m);
     D = calculateLocalD(e,m);
 
@@ -142,35 +138,43 @@ Matrix createLocalK(int e,mesh &m){
         cout << "\n!---CATASTROPHIC FAILURE---!\n";
         exit(EXIT_FAILURE);
     }
-    
+
     calculateGammaMatrix(g_matrix);
     calculateLocalA(e,Alpha,m);
     calculateBetaMatrix(Beta);
-    productRealMatrix(u_bar*J/(6*D),productMatrixMatrix(g_matrix,productMatrixMatrix(Alpha,Beta,2,2,6),6,2,6),matrixA);
-
-    //Preparando matrixK (En clase conocida simplemente como K)
-    nu = m.getParameter(DYNAMIC_VISCOSITY);
+    
     Ae = calculateLocalArea(e,m);
     transpose(Alpha,Alphat);
     transpose(Beta,Betat);
-    productRealMatrix(nu*Ae/(D*D),productMatrixMatrix(Betat,productMatrixMatrix(Alphat,productMatrixMatrix(Alpha,Beta,2,2,6),2,2,6),6,2,6),matrixK);
-
-    //Preparando matrixG (En clase conocida simplemente como G)
-    rho = m.getParameter(DENSITY);
     calculateBPrima(BPrima);
-    productRealMatrix(J/(6*rho*D),productMatrixMatrix(g_matrix,productMatrixMatrix(Alpha,BPrima,2,2,3),6,2,3),matrixG);
-
-    //Preparando matrixD (En clase conocida simplemente como D)
     transpose(BPrima,BPrimat);
     transpose(g_matrix,g_matrix_t);
+//---------------------------------------------------------------------------------------------------------------
+    //A
+    tao = m.getParameter(TAO_CONST);
+    productRealMatrix(tao*J/(24*D),productMatrixMatrix(g_matrix,productMatrixMatrix(Alpha,Beta,2,2,6),6,2,6),matrixA);
+
+    //B --> -K
+    k = m.getParameter(K_CONST);
+    productRealMatrix(k*Ae/(D*D),productMatrixMatrix(Betat,productMatrixMatrix(Alphat,productMatrixMatrix(Alpha,Beta,2,2,6),2,2,6),6,2,6),matrixK);
+
+    //C --> -I
+    delta = m.getParameter(DELTA_CONST);
+    productRealMatrix((-1)*(delta*Ae)/(8*D*D),productMatrixMatrix(Betat,productMatrixMatrix(Alphat,productMatrixMatrix(Alpha,BPrima,2,2,3),2,2,3),6,2,3),matrixI);
+
+    //D
+    lambda = m.getParameter(LAMBDA_CONST);
+    productRealMatrix((J*lambda)/(9*D),productMatrixMatrix(g_matrix,productMatrixMatrix(Alpha,BPrima,2,2,3),6,2,3),matrixDd);
+
+    //Preparando matrixD
     productRealMatrix(J/(6*D),productMatrixMatrix(BPrimat,productMatrixMatrix(Alphat,g_matrix_t,2,2,6),3,2,6),matrixD);
 
     //Colocando submatrices en K
     zeroes(K,9);
     ubicarSubMatriz(K,0,5,0,5,sumMatrix(matrixA,matrixK,6,6));
-    ubicarSubMatriz(K,0,5,6,8,matrixG);
-    ubicarSubMatriz(K,6,8,0,5,matrixD );
-
+    ubicarSubMatriz(K,0,5,6,8,sumMatrix(matrixDd,matrixI,6,3));
+    ubicarSubMatriz(K,6,8,0,5,matrixD);
+//---------------------------------------------------------------------------------------------------------------
     return K;
 }
 
@@ -178,8 +182,9 @@ Vector createLocalb(int e,mesh &m){
     Vector b0,b,f;
     Matrix g_matrix;
 
-    float f_x = m.getParameter(EXTERNAL_FORCE_X);
-    float f_y = m.getParameter(EXTERNAL_FORCE_Y);
+    float f_x = m.getParameter(V_CONST);
+    float f_y = m.getParameter(PSI_CONST);
+    float eta = m.getParameter(ETA_CONST);
     float J = calculateLocalJ(e,m);
     calculateGammaMatrix(g_matrix);
     zeroes(f,2);
@@ -189,7 +194,7 @@ Vector createLocalb(int e,mesh &m){
     zeroes(b0,6);
     productMatrixVector(g_matrix,f,b0);
     productRealVector(J/6,b0,b);
-    b.push_back(0); b.push_back(0); b.push_back(0);
+    b.push_back(eta*J/6); b.push_back(eta*J/6); b.push_back(eta*J/6);
 
     return b;
 }

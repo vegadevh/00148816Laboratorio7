@@ -34,8 +34,8 @@ void correctConditions(int n,condition *list,int *indices){
     for(int i=0;i<n-1;i++){
         int pivot = list[i].getNode1();
         for(int j=i;j<n;j++)
-            //Si la condición actual corresponde a un nodo posterior al nodo eliminado por
-            //aplicar la condición anterior, se debe actualizar su posición.
+            //Si la condiciï¿½n actual corresponde a un nodo posterior al nodo eliminado por
+            //aplicar la condiciï¿½n anterior, se debe actualizar su posiciï¿½n.
             if(list[j].getNode1()>pivot)
                 list[j].setNode1(list[j].getNode1()-1);
     }
@@ -74,19 +74,19 @@ void fusionDirichlet(int n1,condition* list1,int n2,condition* list2,int n3,cond
 void leerMallayCondiciones(mesh &m,char *filename){
     char inputfilename[150];
     ifstream file;
-    float u_bar,nu,rho,f_x,f_y;
+    float tao,k,lambda,v,psi,delta,eta;
     int nnodes,neltos,ndirich_u,ndirich_v,ndirich_p;
     condition *dirichlet_u, *dirichlet_v, *dirichlet_p;
 
     addExtension(inputfilename,filename,".dat");
     file.open(inputfilename);
 
-    file >> u_bar >> nu >> rho >> f_x >> f_y;
+    file >> tao >> k >> lambda >> v >> psi >> delta >> eta;
     //cout <<u_bar<<nu<<rho<<f_x<<f_y<<"\n";
     file >> nnodes >> neltos >> ndirich_u >> ndirich_v >>ndirich_p;
     //cout <<nnodes<<neltos<<ndirich_u<<ndirich_v<<ndirich_p<<"\n";
 
-    m.setParameters(u_bar,nu,rho,f_x,f_y);
+    m.setParameters(tao,k,lambda,v,psi,delta,eta);
     m.setSizes(nnodes,neltos,ndirich_u+ndirich_v+ndirich_p);
     m.createData();
 
